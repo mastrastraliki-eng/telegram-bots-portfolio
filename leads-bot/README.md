@@ -34,7 +34,7 @@ python -m app.main      # leads go to data/leads.csv until Google Sheets is conf
 3. Create a spreadsheet and share it (Editor) with the service account's email.
 4. Put the spreadsheet ID (the long part of its URL) into `SPREADSHEET_ID` and restart.
 
-> **Testing note:** the Google Sheets path (header creation, raw-value appends, lead numbering) is covered
+> **Testing note:** the Google Sheets writes (raw-value appends, lead numbering) are covered
 > by `demo/scenario_leads.py` against a fake worksheet; the end-to-end demo and screenshots use CSV mode.
 > Connect a real spreadsheet with the steps above before going live.
 
