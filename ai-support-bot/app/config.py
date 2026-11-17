@@ -18,7 +18,7 @@ class Settings:
     # "gemini" = Google Gemini (free tier), "ollama" = free local model, "claude" = Anthropic API
     ai_provider: str = os.getenv("AI_PROVIDER", "gemini").lower()
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
-    gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
     ollama_url: str = os.getenv("OLLAMA_URL", "http://localhost:11434")
     ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
     # The Anthropic SDK reads ANTHROPIC_API_KEY from the environment itself.

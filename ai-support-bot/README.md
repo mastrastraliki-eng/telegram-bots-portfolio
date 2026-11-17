@@ -13,6 +13,8 @@ Runs on any of three AI backends, switched with one setting:
 The demo is set up for a fictional coffee roastery, "Brew Lab Coffee" — swap the knowledge file to
 use it for any business.
 
+![AI answers](../docs/screenshots/ai-2-answers.png)
+
 ## Features
 
 - Answers grounded in [`knowledge/brewlab.md`](knowledge/brewlab.md): prices, delivery, returns,
@@ -70,7 +72,7 @@ python -m app.main
 | `BOT_TOKEN` | — | Token from @BotFather |
 | `AI_PROVIDER` | gemini | `gemini` (free tier), `ollama` (free, local) or `claude` |
 | `GEMINI_API_KEY` | — | Key from Google AI Studio (only for `gemini`) |
-| `GEMINI_MODEL` | gemini-2.5-flash | Gemini model ID |
+| `GEMINI_MODEL` | gemini-3.5-flash-lite | Gemini model ID |
 | `OLLAMA_URL` | http://localhost:11434 | Where Ollama runs |
 | `OLLAMA_MODEL` | qwen2.5:7b | Any chat model pulled into Ollama |
 | `ANTHROPIC_API_KEY` | — | Claude API key (only for `claude`) |

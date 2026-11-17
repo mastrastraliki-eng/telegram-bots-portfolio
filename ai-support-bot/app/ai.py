@@ -6,6 +6,7 @@ Three interchangeable backends:
 - "claude": Anthropic's Claude API, the strongest option for production
 """
 
+import asyncio
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -100,18 +101,25 @@ class GeminiBackend:
             "generationConfig": {"temperature": 0.3},
         }
         headers = {"x-goog-api-key": self.api_key}
-        try:
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60), trust_env=True) as s:
-                async with s.post(self.url, json=payload, headers=headers) as r:
-                    if r.status == 429:
-                        raise BackendError("We're getting a lot of messages right now. Please try again in a minute 🙏")
-                    if r.status >= 400:
-                        log.warning("Gemini API error %s: %s", r.status, (await r.text())[:500])
-                        raise BackendError("Something went wrong on my side. A team member will take a look.", True)
-                    data = await r.json()
-        except (aiohttp.ClientError, TimeoutError) as e:
-            log.warning("Gemini request failed: %r", e)
-            raise BackendError("I can't reach my brain right now 😅 Please try again shortly.") from e
+        data = None
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60), trust_env=True) as s:
+            for attempt in range(3):
+                if attempt:
+                    await asyncio.sleep(2 * attempt)  # free tier is often briefly overloaded: back off and retry
+                try:
+                    async with s.post(self.url, json=payload, headers=headers) as r:
+                        if r.status in (429, 500, 503):
+                            log.warning("Gemini busy (%s), attempt %s", r.status, attempt + 1)
+                            continue
+                        if r.status >= 400:
+                            log.warning("Gemini API error %s: %s", r.status, (await r.text())[:500])
+                            raise BackendError("Something went wrong on my side. A team member will take a look.", True)
+                        data = await r.json()
+                        break
+                except (aiohttp.ClientError, TimeoutError) as e:
+                    log.warning("Gemini request failed: %r", e)
+        if data is None:
+            raise BackendError("We're getting a lot of messages right now. Please try again in a minute 🙏")
 
         candidates = data.get("candidates") or []
         if not candidates or candidates[0].get("finishReason") in {"SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST"}:

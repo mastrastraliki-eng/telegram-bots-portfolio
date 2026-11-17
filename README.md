@@ -23,6 +23,13 @@ Docker, and end-to-end tests.
 |---|---|---|---|
 | ![](docs/screenshots/leads-1-choose-service.png) | ![](docs/screenshots/leads-2-qualify.png) | ![](docs/screenshots/leads-3-sent.png) | ![](docs/screenshots/leads-4-manager.png) |
 
+### AI support bot
+| Start | Answers from the knowledge base | Support team gets the case | Operator replies |
+|---|---|---|---|
+| ![](docs/screenshots/ai-1-start.png) | ![](docs/screenshots/ai-2-answers.png) | ![](docs/screenshots/ai-3-operator-chat.png) | ![](docs/screenshots/ai-4-handoff.png) |
+
+The AI answers are real replies from Gemini (free tier) to the questions shown; the operator's reply is typed by the demo script.
+
 Screenshots are generated from real runs of the bots' code: each scenario in [`demo/`](demo/) drives
 the actual aiogram handlers through an offline Telegram emulator and renders the resulting chat.
 
