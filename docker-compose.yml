@@ -1,0 +1,20 @@
+# Run all three bots: copy each bot's .env.example to .env, fill it in, then `docker compose up -d --build`
+services:
+  booking-bot:
+    build: ./booking-bot
+    env_file: ./booking-bot/.env
+    volumes: ["./booking-bot/data:/bot/data"]
+    restart: unless-stopped
+
+  leads-bot:
+    build: ./leads-bot
+    env_file: ./leads-bot/.env
+    volumes:
+      - ./leads-bot/data:/bot/data
+      - ./leads-bot/credentials.json:/bot/credentials.json:ro
+    restart: unless-stopped
+
+  ai-support-bot:
+    build: ./ai-support-bot
+    env_file: ./ai-support-bot/.env
+    restart: unless-stopped
