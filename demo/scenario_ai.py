@@ -19,7 +19,9 @@ os.environ.update(BOT_TOKEN="42:TEST", SUPPORT_CHAT_ID="-100500", ANTHROPIC_API_
 from aiogram import Dispatcher  # noqa: E402
 from aiogram.types import User  # noqa: E402
 
-from app.ai import HANDOFF_MARK, Answer, SupportAI  # noqa: E402
+from aiohttp import web  # noqa: E402
+
+from app.ai import HANDOFF_MARK, Answer, ClaudeBackend, GeminiBackend, OllamaBackend, SupportAI  # noqa: E402
 from app.handlers import chat  # noqa: E402
 from app.memory import ChatMemory  # noqa: E402
 from simulator import Emulator  # noqa: E402
@@ -42,9 +44,11 @@ class StubAI:
         return Answer(f"stub answer to: {history[-1]['content']}", False)
 
 
-async def check_response_parsing() -> None:
-    """Run the real SupportAI.reply against a fake Anthropic client."""
-    ai = SupportAI()
+async def check_backends() -> None:
+    """Run the real SupportAI + both backends against fake model servers."""
+    # --- Claude backend with a fake Anthropic client ---
+    claude = ClaudeBackend("claude-opus-5-5", "low")
+    ai = SupportAI(claude)
     assert "Yirgacheffe" in ai.system  # knowledge base is in the system prompt
 
     def fake(text, stop="end_turn"):
@@ -55,7 +59,7 @@ async def check_response_parsing() -> None:
                 content=[SimpleNamespace(type="text", text=text)],
                 usage=SimpleNamespace(input_tokens=1, cache_read_input_tokens=0, output_tokens=1),
             )
-        ai.client = SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(create=create)))
+        claude.client = SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(create=create)))
 
     fake("UK shipping is £3.95, free over £30.")
     a = await ai.reply([{"role": "user", "content": "shipping?"}])
@@ -66,12 +70,56 @@ async def check_response_parsing() -> None:
     assert a.handoff and HANDOFF_MARK not in a.text, a
 
     fake("", stop="refusal")
-    a = await ai.reply([{"role": "user", "content": "..."}])
-    assert a.handoff
+    assert (await ai.reply([{"role": "user", "content": "..."}])).handoff
+
+    # --- Ollama backend against a local fake Ollama server ---
+    seen = {}
+
+    async def chat_endpoint(request):
+        seen.update(await request.json())
+        return web.json_response({"message": {"role": "assistant", "content": f"Sure! {HANDOFF_MARK}"}})
+
+    gemini_seen = {}
+
+    async def gemini_endpoint(request):
+        gemini_seen.update(await request.json(), key=request.headers.get("x-goog-api-key"))
+        last = gemini_seen["contents"][-1]["parts"][0]["text"]
+        if last == "blocked":
+            return web.json_response({"candidates": [{"finishReason": "SAFETY"}]})
+        return web.json_response({"candidates": [{"content": {"parts": [{"text": "Free UK shipping over £30."}]},
+                                                  "finishReason": "STOP"}]})
+
+    app = web.Application()
+    app.router.add_post("/api/chat", chat_endpoint)
+    app.router.add_post("/v1beta/models/gemini-test:generateContent", gemini_endpoint)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "127.0.0.1", 0)
+    await site.start()
+    port = site._server.sockets[0].getsockname()[1]
+    try:
+        ai = SupportAI(OllamaBackend(f"http://127.0.0.1:{port}", "qwen2.5:7b"))
+        a = await ai.reply([{"role": "user", "content": "hi"}])
+        assert a == Answer("Sure!", True), a
+        assert seen["model"] == "qwen2.5:7b" and seen["messages"][0]["role"] == "system" and not seen["stream"]
+
+        ai = SupportAI(GeminiBackend("KEY", "gemini-test", f"http://127.0.0.1:{port}"))
+        history = [{"role": "user", "content": "hi"}, {"role": "assistant", "content": "hello"},
+                   {"role": "user", "content": "shipping?"}]
+        assert await ai.reply(history) == Answer("Free UK shipping over £30.", False)
+        assert gemini_seen["key"] == "KEY" and [c["role"] for c in gemini_seen["contents"]] == ["user", "model", "user"]
+        assert "Yirgacheffe" in gemini_seen["system_instruction"]["parts"][0]["text"]
+        assert (await ai.reply([{"role": "user", "content": "blocked"}])).handoff
+    finally:
+        await runner.cleanup()
+
+    # Unreachable Ollama -> friendly message, no crash
+    a = await SupportAI(OllamaBackend("http://127.0.0.1:9", "x")).reply([{"role": "user", "content": "hi"}])
+    assert "try again" in a.text
 
 
 async def main() -> None:
-    await check_response_parsing()
+    await check_backends()
 
     ai, memory = StubAI(), ChatMemory()
     dp = Dispatcher(ai=ai, memory=memory)

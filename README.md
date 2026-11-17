@@ -9,7 +9,7 @@ Docker, and end-to-end tests.
 |---|---|---|
 | [**Booking bot**](booking-bot/) | Clients book a service and time slot in a few taps; the owner gets every booking instantly and a daily schedule; clients get reminders. | aiogram 3 FSM, SQLite, background reminders |
 | [**Leads bot**](leads-bot/) | Replaces a website form: qualifies the lead (service, budget, timeline), saves it to **Google Sheets** and pings the sales team. | aiogram 3, gspread, deep-link source tracking |
-| [**AI support bot**](ai-support-bot/) | Answers customer questions 24/7 from the company's knowledge base and hands tricky cases to a human operator. | Claude API, prompt caching, human hand-off |
+| [**AI support bot**](ai-support-bot/) | Answers customer questions 24/7 from the company's knowledge base and hands tricky cases to a human operator. | Gemini (free tier), local LLM via Ollama, or Claude; human hand-off |
 
 ## Screenshots
 
@@ -30,7 +30,7 @@ the actual aiogram handlers through an offline Telegram emulator and renders the
 
 - **Python 3.12**, **aiogram 3** (async, FSM, callback data factories, routers, dependency injection)
 - **SQLite** (aiosqlite) for bookings, **Google Sheets** (gspread) or CSV for leads
-- **Claude API** (Anthropic SDK) for the AI assistant, with prompt caching and refusal fallback
+- **Gemini**, **Ollama** (local models) or the **Claude API** for the AI assistant, switchable in `.env`
 - **Docker** / docker compose for deployment on any VPS
 
 ## Quick start

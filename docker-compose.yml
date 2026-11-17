@@ -18,3 +18,6 @@ services:
     build: ./ai-support-bot
     env_file: ./ai-support-bot/.env
     restart: unless-stopped
+    # With AI_PROVIDER=ollama and Ollama running on the host, set in .env:
+    # OLLAMA_URL=http://host.docker.internal:11434
+    extra_hosts: ["host.docker.internal:host-gateway"]
